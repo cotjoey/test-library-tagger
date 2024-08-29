@@ -23,7 +23,8 @@ jobs:
       id: filter
       with:
         filters: |
-          libraries: libraries/**
+          libraries:
+            - 'libraries/**'
   # JOB to tag the application
   tag:
       needs: changes
