@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-// test workflow again
+// test workflow
 func main() {
 	fmt.Println("Hello, World!")
 }
