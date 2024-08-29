@@ -13,7 +13,7 @@ jobs:
       pull-requests: read
     outputs:
       # Expose matched filters as job 'libraries' output variable
-      libraries: ${{ steps.filter.outputs.changes }}
+      libraries: ${{ steps.filter.outputs.libraries }}
     steps:
     # For pull requests it's not necessary to checkout the code
     - uses: actions/checkout@v4
