@@ -4,48 +4,85 @@ on:
     branches: # PRs to the following branches will trigger the workflow
       - dev
       - main
+#jobs:
+#  # JOB to run change detection
+#  changes:
+#    runs-on: ubuntu-latest
+#    # Required permissions
+#    permissions:
+#      pull-requests: read
+#    outputs:
+#      # Expose matched filters as job 'libraries' output variable
+#      libraries: ${{ steps.filter.outputs.libraries }}
+#    steps:
+#    # For pull requests it's not necessary to checkout the code
+#    - uses: actions/checkout@v4
+#      with:
+#        repository: cotjoey/test-library-tagger
+#    - uses: dorny/paths-filter@v3
+#      id: filter
+#      with:
+#        filters: |
+#          libraries:
+#            - 'libraries/**'
+#  # JOB to tag the application
+#  tag:
+#      needs: changes
+#      if: always() && needs.changes.outputs.libraries == true
+#      runs-on: ubuntu-latest
+#      strategy:
+#        matrix:
+#          # Parse JSON array containing names of all filters matching any of changed files
+#          # e.g. ['package1', 'package2'] if both package folders contains changes
+#          library: ${{ fromJSON(needs.changes.outputs.libraries) }}
+#      steps:
+#        - name: Get branch name
+#          id: branch-name
+#          uses: tj-actions/branch-name@v5.2
+#        - name: Dump matrix context
+#          env:
+#            MATRIX_CONTEXT: ${{ toJson(matrix) }}
+#          run: echo "$MATRIX_CONTEXT"
+#        #- name: Tag application
+#        #  uses: cotjoey/test-library-tagger/.github/workflows/tagger_core.yml@main
+#        #  with:
+#        #      path: libraries/${{ path }}
+#        #      branch: ${{ steps.branch-name.outputs.triggering_branch_output }}
+#        
 jobs:
-  # JOB to run change detection
-  changes:
+  find-out-changes:
     runs-on: ubuntu-latest
-    # Required permissions
-    permissions:
-      pull-requests: read
     outputs:
-      # Expose matched filters as job 'libraries' output variable
-      libraries: ${{ steps.filter.outputs.libraries }}
+      changed_directories: ${{ steps.set-output.outputs.changed_directories }}  # The `dirs` doesn't exist in the outputs of changed-files@v35 action.
     steps:
-    # For pull requests it's not necessary to checkout the code
-    - uses: actions/checkout@v4
-      with:
-        repository: cotjoey/test-library-tagger
-    - uses: dorny/paths-filter@v3
-      id: filter
-      with:
-        filters: |
-          libraries:
-            - 'libraries/**'
-  # JOB to tag the application
-  tag:
-      needs: changes
-      if: always() && needs.changes.outputs.libraries == true
-      runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          # Parse JSON array containing names of all filters matching any of changed files
-          # e.g. ['package1', 'package2'] if both package folders contains changes
-          library: ${{ fromJSON(needs.changes.outputs.libraries) }}
-      steps:
-        - name: Get branch name
-          id: branch-name
-          uses: tj-actions/branch-name@v5.2
-        - name: Dump matrix context
-          env:
-            MATRIX_CONTEXT: ${{ toJson(matrix) }}
-          run: echo "$MATRIX_CONTEXT"
-        #- name: Tag application
-        #  uses: cotjoey/test-library-tagger/.github/workflows/tagger_core.yml@main
-        #  with:
-        #      path: libraries/${{ path }}
-        #      branch: ${{ steps.branch-name.outputs.triggering_branch_output }}
-        
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+        with:
+          dir_names: true
+          dir_names_max_depth: 2  # This is optional. If not provided, full subdirectories' paths will be provided. Use it if you need to trim the output. See docs for details: https://github.com/tj-actions/changed-files/tree/main#inputs.
+          json: true
+          quotepath: false
+
+      - name: 'Set output in the matrix format'
+        id: set-output
+        run: echo "changed_directories={\"dir\":${{ steps.changed-files.outputs.all_changed_files }}}" >> "$GITHUB_OUTPUT"
+
+  do-stuff:
+    runs-on: ubuntu-latest
+    if: ${{ needs.find-out-changes.outputs.changed_directories != '' }}  # Without it, the strategy parser will fail if the changed_directories is empty.
+    strategy:
+      matrix: ${{fromJson(needs.find-out-changes.outputs.changed_directories)}}
+    needs:
+      - find-out-changes
+    steps:
+      #- uses: actions/checkout@v3
+      #- run: zip ${{ matrix.dir }} etc.
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
