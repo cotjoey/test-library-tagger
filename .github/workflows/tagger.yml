@@ -27,8 +27,8 @@ jobs:
             - 'libraries/**'
   # JOB to tag the application
   tag:
-      #needs: changes
-      if: ${{ needs.changes.outputs.libraries == 'true' }}
+      needs: changes
+      if: always() && needs.changes.outputs.libraries == true
       runs-on: ubuntu-latest
       strategy:
         matrix:
