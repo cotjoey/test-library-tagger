@@ -1,11 +1,9 @@
 name: tagger_all_aps
 on:
-    push:
-        branches:
-            - dev
-            - main
-        paths:
-            - libraries/**
+  pull_request:
+    branches: # PRs to the following branches will trigger the workflow
+      - dev
+      - main
 jobs:
   # JOB to run change detection
   changes:
@@ -14,7 +12,7 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      # Expose matched filters as job 'packages' output variable
+      # Expose matched filters as job 'libraries' output variable
       libraries: ${{ steps.filter.outputs.changes }}
     steps:
     # For pull requests it's not necessary to checkout the code
